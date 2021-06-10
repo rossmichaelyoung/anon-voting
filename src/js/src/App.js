@@ -1,11 +1,12 @@
 import React, { Component } from "react";
 import Login from "./forms/Login";
 import CreateAccount from "./forms/CreateAccount";
-import Election from "./Election";
+import Election from "./components/Election";
+import Menu from "./components/Menu";
 import { Button } from "antd";
 import "antd/dist/antd.css";
 import "./antd.css";
-import Container from "./Container";
+import Container from "./components/Container";
 
 class App extends Component {
   constructor(props) {
@@ -84,7 +85,8 @@ class App extends Component {
 
     if (isLoggedIn) {
       const { username, width } = this.state;
-      return <Election username={username} size={width} logout={this.logout} />;
+      // return <Election username={username} size={width} logout={this.logout} />;
+      return <Menu username={username} size={width} logout={this.logout} />;
     } else {
       if (createAccount) {
         return (

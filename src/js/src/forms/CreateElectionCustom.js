@@ -5,12 +5,12 @@ import { createElection, addPlayerToElection } from "../client";
 import TextField from "@material-ui/core/TextField";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 
-const divStyle = { marginTop: "3%", marginBottom: "3%" };
+const divStyle = { marginTop: "5%", marginBottom: "5%" };
 
 const CreateElectionCustom = (props) => {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const availableUsernames = props.usernames.map((obj) => obj.userName);
+  const availableUsernames = props.usernames.map((obj) => obj.username);
 
   const onSubmit = () => {
     setLoading(true);
@@ -28,16 +28,17 @@ const CreateElectionCustom = (props) => {
     if (playersSet.length >= 2 && validPlayers) {
       const election = {
         electionSize: playersSet.length,
-        electionId: "electionId",
         owner: props.owner,
+        yesVotes: 0,
+        noVotes: 0,
       };
 
       createElection(election).then((res) =>
-        res.text().then((response) => {
-          if (response !== "N/A") {
-            election.electionId = response;
+        res.json().then((response) => {
+          const electionId = response["electionId"];
+          if (electionId !== -1) {
             playersSet.forEach((player) => {
-              addPlayerToElection(player.value, election.electionId);
+              addPlayerToElection(player.value, electionId);
             });
           } else {
             alert("Cannot create election");
@@ -58,13 +59,21 @@ const CreateElectionCustom = (props) => {
       <div>
         {(players || []).length > 0 &&
           players.map((player, index) => (
-            <div className='row' key={index}>
+            <div className='row' key={index} style={divStyle}>
               <div className='col'>
                 <>
                   <Autocomplete
                     value={player.value}
                     onChange={(event, newValue) => {
-                      player.value = newValue;
+                      setPlayers(
+                        players.map((p) => {
+                          if (p.index === index) {
+                            p.value = newValue;
+                          }
+                          return p;
+                        })
+                      );
+                      // player.value = newValue;
                     }}
                     id={`player-${index}`}
                     options={availableUsernames}
