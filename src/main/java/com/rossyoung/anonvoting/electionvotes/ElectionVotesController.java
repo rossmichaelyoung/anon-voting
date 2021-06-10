@@ -19,7 +19,7 @@ public class ElectionVotesController {
     }
 
     @GetMapping("api/elections/{electionId}/vote/yes")
-    public int getYesVotes(@PathVariable String electionId) {
+    public int getYesVotes(@PathVariable Long electionId) {
         if(electionService.doesElectionExist(electionId)) {
             return electionVotesService.getYesVotes(electionId);
         }
@@ -27,7 +27,7 @@ public class ElectionVotesController {
     }
 
     @GetMapping("api/elections/{electionId}/vote/no")
-    public int getNoVotes(@PathVariable String electionId) {
+    public int getNoVotes(@PathVariable Long electionId) {
         if(electionService.doesElectionExist(electionId)) {
             return electionVotesService.getNoVotes(electionId);
         }
@@ -35,7 +35,7 @@ public class ElectionVotesController {
     }
 
     @GetMapping("api/elections/{electionId}/vote/active")
-    public boolean isVotingActive(@PathVariable String electionId) {
+    public boolean isVotingActive(@PathVariable Long electionId) {
         if(electionService.doesElectionExist(electionId)) {
             return !(
                     electionVotesService.getTotalNumberVotes(electionId) == electionService.totalElectionSpots(electionId)

@@ -1,68 +1,86 @@
 package com.rossyoung.anonvoting.election;
 
 import com.rossyoung.anonvoting.player.Player;
-import com.rossyoung.anonvoting.player.PlayerDataAccessService;
-import lombok.Data;
+import com.rossyoung.anonvoting.player.PlayerRepository;
+import com.rossyoung.anonvoting.vote.Vote;
+import com.rossyoung.anonvoting.vote.VoteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ElectionService {
 
-    private final ElectionDataAccessService electionDataAccessService;
-    private final PlayerDataAccessService playerDataAccessService;
+//    private final ElectionDataAccessService electionDataAccessService;
+//    private final PlayerDataAccessService playerDataAccessService;
+    private final ElectionRepository electionRepository;
+    private final PlayerRepository playerRepository;
+    private final VoteRepository voteRepository;
 
     @Autowired
-    public ElectionService(ElectionDataAccessService electionDataAccessService, PlayerDataAccessService playerDataAccessService) {
-        this.electionDataAccessService = electionDataAccessService;
-        this.playerDataAccessService = playerDataAccessService;
+    public ElectionService(ElectionRepository electionRepository, PlayerRepository playerRepository, VoteRepository voteRepository) {
+        this.electionRepository = electionRepository;
+        this.playerRepository = playerRepository;
+        this.voteRepository = voteRepository;
     }
 
     List<Election> getAllElections() {
-        return electionDataAccessService.selectAllElections();
+//        return electionDataAccessService.selectAllElections();
+        return electionRepository.findAll();
     }
 
-    int addElection(Election election) {
-        return electionDataAccessService.insertElection(election);
+    Election addElection(Election election) {
+//        return electionDataAccessService.insertElection(election);
+        return electionRepository.save(election);
     }
 
-    void addPlayerToElection(String username, String electionId) {
-        if(!electionDataAccessService.selectPlayerInElection(username, electionId).equals(username) && !playerDataAccessService.selectUserName(new Player(username, "")).isEmpty()) {
-            electionDataAccessService.insertPlayerInElection(username, electionId);
+    void addPlayerToElection(String username, Long electionId) {
+        if(!voteRepository.existsById(username) && playerRepository.existsById(username)) {
+            voteRepository.save(new Vote(username, electionId));
         }
     }
 
-    List<String> getPlayersInElection(String electionId) {
-        return electionDataAccessService.selectPlayersInElection(electionId);
+    List<String> getPlayersInElection(Long electionId) {
+//        return electionDataAccessService.selectPlayersInElection(electionId);
+        return voteRepository.findVotesByElectionId(electionId).stream().map(Vote::getUsername).collect(Collectors.toList());
     }
 
     boolean checkElectionIdAvailability(Election election) {
-        String electionId = election.getElectionId();
-        return !electionDataAccessService.selectElectionIdFromElection(electionId).contains(electionId);
+//        String electionId = election.getElectionId();
+//        return !electionDataAccessService.selectElectionIdFromElection(electionId).contains(electionId);
+        return electionRepository.existsById(election.getElectionId());
     }
 
-    public int totalElectionSpots(String electionId) {
-        return electionDataAccessService.selectElectionSize(electionId).get(0);
+    public int totalElectionSpots(Long electionId) {
+//        return electionDataAccessService.selectElectionSize(electionId).get(0);
+        return electionRepository.findById(electionId).map(Election::getElectionSize).orElse(-1);
     }
 
-    boolean electionSpotsAvailable(String electionId) {
+    boolean electionSpotsAvailable(Long electionId) {
+//        int maxSize = totalElectionSpots(electionId);
+//        int currentNumberOfPlayers = electionDataAccessService.selectNumberOfPlayersInElection(electionId).get(0);
+//        return currentNumberOfPlayers < maxSize;
         int maxSize = totalElectionSpots(electionId);
-        int currentNumberOfPlayers = electionDataAccessService.selectNumberOfPlayersInElection(electionId).get(0);
+        int currentNumberOfPlayers = voteRepository.findVotesByElectionId(electionId).size();
         return currentNumberOfPlayers < maxSize;
     }
 
-    public boolean doesElectionExist(String electionId) {
-        return electionDataAccessService.selectElectionIdFromElection(electionId).contains(electionId);
+    public boolean doesElectionExist(Long electionId) {
+//        return electionDataAccessService.selectElectionIdFromElection(electionId).contains(electionId);
+        return electionRepository.existsById(electionId);
     }
 
-    void deleteElection(String electionId) {
-        electionDataAccessService.deleteFromElections(electionId);
-        electionDataAccessService.deleteFromPlayerElectionMap(electionId);
+    void deleteElection(Long electionId) {
+//        electionDataAccessService.deleteFromElections(electionId);
+//        electionDataAccessService.deleteFromPlayerElectionMap(electionId);
+        electionRepository.deleteById(electionId);
+        voteRepository.deleteAllByElectionId(electionId);
     }
 
-    boolean isPlayerInElection(String username, String electionId) {
-        return electionDataAccessService.selectPlayerInElection(username, electionId).equals(username);
+    boolean isPlayerInElection(String username, Long electionId) {
+//        return electionDataAccessService.selectPlayerInElection(username, electionId).equals(username);
+        return voteRepository.findVoteByUsername(username).map(v -> v.getElectionId().equals(electionId)).orElse(false);
     }
 }

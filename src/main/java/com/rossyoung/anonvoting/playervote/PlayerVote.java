@@ -9,6 +9,7 @@ public class PlayerVote {
         YES, NO
     }
 
-    private final Vote vote;
     private final String username;
+
+    private final Vote vote;
 }

@@ -1,27 +1,31 @@
 package com.rossyoung.anonvoting.electionvotes;
 
+import com.rossyoung.anonvoting.election.Election;
+import com.rossyoung.anonvoting.election.ElectionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ElectionVotesService {
 
-    private final ElectionVotesDataAccessService electionVotesDataAccessService;
+//    private final ElectionVotesDataAccessService electionVotesDataAccessService;
+    private final ElectionRepository electionRepository;
 
     @Autowired
-    public ElectionVotesService(ElectionVotesDataAccessService electionVotesDataAccessService) {
-        this.electionVotesDataAccessService = electionVotesDataAccessService;
+    public ElectionVotesService(ElectionRepository electionRepository) {
+        this.electionRepository = electionRepository;
     }
 
-    int getYesVotes(String electionId) {
-        return electionVotesDataAccessService.selectYesVotes(electionId);
+    int getYesVotes(Long electionId) {
+//        return electionVotesDataAccessService.selectYesVotes(electionId);
+        return electionRepository.findById(electionId).map(Election::getYesVotes).orElse(-1);
     }
 
-    int getNoVotes(String electionId) {
-        return electionVotesDataAccessService.selectNoVotes(electionId);
+    int getNoVotes(Long electionId) {
+        return electionRepository.findById(electionId).map(Election::getNoVotes).orElse(-1);
     }
 
-    int getTotalNumberVotes(String electionId) {
+    int getTotalNumberVotes(Long electionId) {
         return getNoVotes(electionId) + getYesVotes(electionId);
     }
 }
