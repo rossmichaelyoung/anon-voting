@@ -19,7 +19,7 @@ public class PlayerController {
     @GetMapping("api/players")
     public List<Player> getAllPlayers() {
         List<String> usernames = playerService.getAllPlayers();
-        List<Player> players = new ArrayList<Player>();
+        List<Player> players = new ArrayList<>();
         for (String username: usernames) {
             players.add(new Player(username, ""));
         }
@@ -29,8 +29,9 @@ public class PlayerController {
     @PostMapping("api/players")
     @ResponseBody
     public int addPlayer(@RequestBody Player player) {
-        if(playerService.checkUserNameAvailability(player)) {
-            return playerService.addPlayer(player);
+        if(!playerService.checkUserNameAvailability(player)) {
+            playerService.addPlayer(player);
+            return 1;
         }
         return -1;
     }
@@ -38,7 +39,7 @@ public class PlayerController {
     @GetMapping("api/players/available")
     public List<Player> getAllAvailablePlayers() {
         List<String> usernames = playerService.getAllAvailablePlayers();
-        List<Player> players = new ArrayList<Player>();
+        List<Player> players = new ArrayList<>();
         for (String username: usernames) {
             players.add(new Player(username, ""));
         }
@@ -56,7 +57,7 @@ public class PlayerController {
 
     @PostMapping("api/players/election")
     @ResponseBody
-    public String getPlayerElection(@RequestBody String username) {
+    public Long getPlayerElection(@RequestBody String username) {
         return playerService.getPlayerElection(username);
     }
 }

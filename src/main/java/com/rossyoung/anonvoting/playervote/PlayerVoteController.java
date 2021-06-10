@@ -17,15 +17,15 @@ public class PlayerVoteController {
     }
 
     @PostMapping("api/players/vote/{electionId}")
-    public void vote(@RequestBody PlayerVote playerVote, @PathVariable String electionId) {
+    public void vote(@RequestBody PlayerVote playerVote, @PathVariable Long electionId) {
         playerVoteService.playerVoted(playerVote, electionId);
     }
 
     @PostMapping("api/players/hasvoted/{electionId}")
     @ResponseBody
-    public boolean hasVoted(@RequestBody String username, @PathVariable String electionId) {
+    public boolean hasVoted(@RequestBody String username, @PathVariable Long electionId) {
         if(electionService.doesElectionExist(electionId))
-            return playerVoteService.hasPlayerVoted(username, electionId);
+            return playerVoteService.hasPlayerVoted(username);
 
         return true;
     }

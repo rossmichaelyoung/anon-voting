@@ -22,57 +22,37 @@ public class ElectionController {
 
     @PostMapping("api/elections")
     @ResponseBody
-    public String addElection(@RequestBody Election election) {
-        String electionId = getRandomString() + election.getOwner() + election.getElectionSize();
-        election.setElectionId(electionId);
-        while(!electionService.checkElectionIdAvailability(election)) {
-            electionId = getRandomString() + election.getOwner() + election.getElectionSize();
-            election.setElectionId(electionId);
-        }
-        if (electionService.addElection(election) == 1) {
-            return election.getElectionId();
-        }
-        return "N/A";
+    public Election addElection(@RequestBody Election election) {
+        return electionService.addElection(election);
     }
 
     @PostMapping("api/elections/{electionId}/players")
-    public void addPlayerToElection(@RequestBody String username, @PathVariable String electionId) {
+    public void addPlayerToElection(@RequestBody String username, @PathVariable Long electionId) {
         electionService.addPlayerToElection(username, electionId);
     }
 
     @GetMapping("api/elections/{electionId}/players")
-    public List<String> getPlayersInElection(@PathVariable String electionId) {
+    public List<String> getPlayersInElection(@PathVariable Long electionId) {
         return electionService.getPlayersInElection(electionId);
     }
 
     @GetMapping("api/elections/{electionId}")
-    public boolean doesElectionExist(@PathVariable String electionId) {
+    public boolean doesElectionExist(@PathVariable Long electionId) {
         return electionService.doesElectionExist(electionId);
     }
 
     @PostMapping("api/elections/{electionId}/availablespot")
     @ResponseBody
-    public boolean electionSpotsAvailable(@RequestBody String username, @PathVariable String electionId) {
+    public boolean electionSpotsAvailable(@RequestBody String username, @PathVariable Long electionId) {
         if(!electionService.isPlayerInElection(username, electionId))
             return electionService.electionSpotsAvailable(electionId);
         return true;
     }
 
     @DeleteMapping("api/elections/{electionId}/delete")
-    public void deleteElection(@PathVariable String electionId) {
+    public void deleteElection(@PathVariable Long electionId) {
         if(electionService.doesElectionExist(electionId)) {
             electionService.deleteElection(electionId);
         }
-    }
-
-    protected String getRandomString() {
-        String characterSpace = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-        StringBuilder s = new StringBuilder();
-        Random rnd = new Random();
-        while (s.length() < 30) {
-            int index = (int) (rnd.nextFloat() * characterSpace.length());
-            s.append(characterSpace.charAt(index));
-        }
-        return s.toString();
     }
 }
