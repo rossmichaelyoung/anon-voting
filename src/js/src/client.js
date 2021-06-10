@@ -29,11 +29,12 @@ export const createElection = (election) =>
     body: JSON.stringify(election),
   });
 
-export const addPlayerToElection = (username, electionId) =>
+export const addPlayerToElection = (username, electionId) => {
   fetch("api/elections/" + electionId + "/players", {
     method: "POST",
     body: username,
   });
+};
 
 export const getPlayerElectionMapping = (username) =>
   fetch("api/players/election", {
