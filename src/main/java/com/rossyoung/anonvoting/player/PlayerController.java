@@ -54,10 +54,4 @@ public class PlayerController {
         }
         return new Player("Not found", "");
     }
-
-    @PostMapping("api/players/election")
-    @ResponseBody
-    public Long getPlayerElection(@RequestBody String username) {
-        return playerService.getPlayerElection(username);
-    }
 }

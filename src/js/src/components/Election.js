@@ -2,73 +2,74 @@ import { useState, useEffect } from "react";
 import React from "react";
 import { Button } from "antd";
 import Container from "./Container";
-
-import {
-  getYesVotes,
-  getNoVotes,
-  vote,
-  isVotingActive,
-  deleteElection,
-} from "../client";
+import SockJS from "sockjs-client";
+import Stomp from "stompjs";
 
 const divStyle = { marginTop: "15%", marginBottom: "5%" };
 
-const Election = (props) => {
-  const { username, size, electionId, exitElection } = props;
-  const [yes, setYes] = useState(0);
-  const [no, setNo] = useState(0);
-  const [isElectionOver, setIsElectionOver] = useState(false);
-  const [hasVoted, setHasVoted] = useState(false);
+const Election = ({
+  username,
+  size,
+  electionId,
+  exitElection,
+  useStickyState,
+}) => {
+  const [yes, setYes] = useStickyState(0, "yes");
+  const [no, setNo] = useStickyState(0, "no");
+  const [isVotingActive, setIsVotingActive] = useStickyState(
+    true,
+    "isVotingActive"
+  );
+  const [hasVoted, setHasVoted] = useStickyState(false, "hasVoted");
 
-  const submitVote = (electionId, playerVote) => {
-    vote(electionId, playerVote);
+  const [stompClient, setStompClient] = useState(null);
+  useEffect(() => {
+    //const socket = new SockJS("http://localhost:8080/ws");
+    const socket = new SockJS(
+      window.location.protocol + "//" + window.location.hostname + ":8080/ws"
+    );
+    const sc = Stomp.over(socket);
+    sc.connect({ username: username, webSocketType: "Vote" }, (frame) => {
+      console.log("Connected: " + frame);
+      sc.subscribe("/topic/election/" + electionId, (frame) => {
+        console.log(frame);
+        console.log(JSON.parse(frame.body));
+        const { isVotingActive, yesVotes, noVotes } = JSON.parse(frame.body);
+        setIsVotingActive(isVotingActive);
+        setYes(yesVotes);
+        setNo(noVotes);
+      });
+    });
+    setStompClient(sc);
+
+    return () => {
+      if (sc !== null) sc.disconnect();
+    };
+  }, [username, electionId, setIsVotingActive, setNo, setYes]);
+
+  useEffect(() => {}, []);
+
+  const submitVote = ({ username, vote, electionId }) => {
+    stompClient.send(
+      "/app/election/vote",
+      {},
+      JSON.stringify({
+        username: username,
+        vote: vote,
+        electionId: electionId,
+      })
+    );
     setHasVoted(true);
   };
-
-  useEffect(() => {
-    const updateVotingStatus = () => {
-      isVotingActive(electionId)
-        .then((res) => res.json())
-        .then((response) => {
-          setIsElectionOver(!response);
-        });
-    };
-    const intervalId = setInterval(() => updateVotingStatus(), 2000);
-    return () => clearInterval(intervalId);
-  }, [electionId]);
-
-  useEffect(() => {
-    const getNo = () => {
-      getNoVotes(electionId)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data !== -1) setNo(data);
-        });
-    };
-    const intervalId = setInterval(() => getNo());
-    return () => clearInterval(intervalId);
-  }, [electionId]);
-
-  useEffect(() => {
-    const getYes = () => {
-      getYesVotes(electionId)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data !== -1) setYes(data);
-        });
-    };
-    const intervalId = setInterval(() => getYes());
-    return () => clearInterval(intervalId);
-  }, [electionId]);
 
   return (
     <Container size={size}>
       <div style={divStyle}>
-        {!isElectionOver && <h1>Vote Wisely, {username}</h1>}
+        {isVotingActive && <h1>Vote Wisely, {username}</h1>}
 
-        {isElectionOver && yes > no && <h1>Motion Passed</h1>}
+        {!isVotingActive && yes > no && <h1>Motion Passed</h1>}
 
-        {isElectionOver && yes <= no && <h1>Motion Did Not Pass</h1>}
+        {!isVotingActive && yes <= no && <h1>Motion Did Not Pass</h1>}
 
         <div>
           <h3>Yes: {yes}</h3>
@@ -77,15 +78,16 @@ const Election = (props) => {
           <h3>No: {no}</h3>
         </div>
 
-        {!isElectionOver && !hasVoted && (
+        {isVotingActive && !hasVoted && (
           <div>
             <Button
               onClick={() => {
-                const playerVote = {
-                  vote: "YES",
+                const ballot = {
                   username: username,
+                  vote: "YES",
+                  electionId: electionId,
                 };
-                submitVote(electionId, playerVote);
+                submitVote(ballot);
                 setYes(yes + 1);
               }}
               type='primary'>
@@ -94,11 +96,12 @@ const Election = (props) => {
 
             <Button
               onClick={() => {
-                const playerVote = {
-                  vote: "NO",
+                const ballot = {
                   username: username,
+                  vote: "NO",
+                  electionId: electionId,
                 };
-                submitVote(electionId, playerVote);
+                submitVote(ballot);
                 setNo(no + 1);
               }}
               type='primary'
@@ -108,11 +111,10 @@ const Election = (props) => {
           </div>
         )}
 
-        {isElectionOver && (
+        {!isVotingActive && (
           <div style={{ marginTop: "0.5%" }}>
             <Button
               onClick={() => {
-                deleteElection(electionId);
                 exitElection();
               }}
               type='primary'>

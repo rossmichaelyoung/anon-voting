@@ -3,6 +3,7 @@ package com.rossyoung.anonvoting.player;
 import lombok.Data;
 
 import javax.persistence.*;
+import java.security.Principal;
 
 @Data
 @Entity(name = "Player")
@@ -21,6 +22,22 @@ public class Player {
 
     public Player(String username, String password) {
         this.username = username;
+        this.password = password;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
         this.password = password;
     }
 }

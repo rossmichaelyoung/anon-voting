@@ -3,53 +3,59 @@ import React from "react";
 import { Button } from "antd";
 import Container from "./Container";
 import CreateElectionCustom from "../forms/CreateElectionCustom";
-import { getPlayerElectionMapping, getAllAvailablePlayers } from "../client";
+import SockJS from "sockjs-client";
+import Stomp from "stompjs";
 import Election from "./Election";
+import { deleteElection } from "../client";
 
 const divStyle = { marginTop: "15%", marginBottom: "5%" };
 
-const Menu = (props) => {
-  const { username, size, logout } = props;
+const Menu = ({ username, size, logout, useStickyState }) => {
   const [createElection, setCreateElection] = useState(false);
-  const [electionId, setElectionId] = useState(-1);
-  const [isElection, setIsElection] = useState(false);
-
-  const [usernames, setUsernames] = useState([]);
-  useEffect(() => {
-    const fillUsernames = () => {
-      getAllAvailablePlayers()
-        .then((res) => res.json())
-        .then((response) => {
-          response.map((obj) => delete obj.password);
-          setUsernames(response);
-        });
-    };
-    fillUsernames();
-  }, [createElection]);
-
-  const [isPlayerInAnElection, setIsPlayerInAnElection] = useState(false);
-  useEffect(() => {
-    const isPlayerInAnElection = () => {
-      getPlayerElectionMapping(username)
-        .then((res) => res.text())
-        .then((response) => {
-          const id = Number(response);
-          if (id !== -1) {
-            setElectionId(id);
-            setIsPlayerInAnElection(true);
-          }
-        });
-    };
-    const intervalId = setInterval(() => isPlayerInAnElection(), 2000);
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [username, setElectionId, setIsPlayerInAnElection]);
+  const [electionId, setElectionId] = useStickyState(null, "electionId");
+  const [isElection, setIsElection] = useStickyState(false, "isElection");
 
   const exitElection = () => {
-    setElectionId(-1);
+    setElectionId(null);
     setIsPlayerInAnElection(false);
     setIsElection(false);
+    deleteElection(electionId);
+    window.localStorage.removeItem("isVotingActive");
+    window.localStorage.removeItem("hasVoted");
+    window.localStorage.removeItem("yes");
+    window.localStorage.removeItem("no");
+  };
+
+  const [isPlayerInAnElection, setIsPlayerInAnElection] = useState(false);
+  const [stompClient, setStompClient] = useState(null);
+  useEffect(() => {
+    //const socket = new SockJS("http://localhost:8080/ws");
+    const socket = new SockJS(
+      window.location.protocol + "//" + window.location.hostname + ":8080/ws"
+    );
+    const sc = Stomp.over(socket);
+    sc.connect(
+      { username: username, webSocketType: "FindElection" },
+      (frame) => {
+        console.log("Connected: " + frame);
+        sc.subscribe("/user/queue/election", (frame) => {
+          console.log("Received Message From Server");
+          console.log(frame);
+          console.log(JSON.parse(frame.body));
+          setElectionId(JSON.parse(frame.body));
+          setIsPlayerInAnElection(true);
+        });
+      }
+    );
+    setStompClient(sc);
+
+    return () => {
+      if (sc !== null) sc.disconnect();
+    };
+  }, [username, setElectionId]);
+
+  const addPlayerToElection = (username, electionId) => {
+    stompClient.send("/app/election/" + electionId, {}, username);
   };
 
   if (!isElection) {
@@ -74,8 +80,8 @@ const Menu = (props) => {
               <h2>Create an Election</h2>
               <CreateElectionCustom
                 owner={username}
-                usernames={usernames}
                 electionCreated={() => setCreateElection(false)}
+                addPlayerToElection={addPlayerToElection}
               />
             </div>
             <div style={divStyle}>
@@ -105,12 +111,7 @@ const Menu = (props) => {
         )}
 
         <div style={{ marginTop: "15%" }}>
-          <Button
-            onClick={() => {
-              logout();
-            }}
-            type='primary'
-            block>
+          <Button onClick={logout} type='primary' block>
             Logout
           </Button>
         </div>
@@ -122,7 +123,8 @@ const Menu = (props) => {
         electionId={electionId}
         size={size}
         username={username}
-        exitElection={() => exitElection()}
+        exitElection={exitElection}
+        useStickyState={useStickyState}
       />
     );
   }
