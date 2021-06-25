@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import React from "react";
 import { Button } from "antd";
-import { createElection, addPlayerToElection } from "../client";
+import { createElection } from "../client";
+import { getAllAvailablePlayers } from "../client";
 import TextField from "@material-ui/core/TextField";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 
@@ -10,16 +11,25 @@ const divStyle = { marginTop: "5%", marginBottom: "5%" };
 const CreateElectionCustom = (props) => {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const availableUsernames = props.usernames.map((obj) => obj.username);
+  const [usernames, setUsernames] = useState([]);
+  useEffect(() => {
+    const fillUsernames = () => {
+      getAllAvailablePlayers()
+        .then((res) => res.json())
+        .then((response) => {
+          setUsernames(response.map((obj) => obj.username));
+        });
+    };
+    fillUsernames();
+  }, []);
 
   const onSubmit = () => {
+    const { addPlayerToElection } = props;
     setLoading(true);
     const playersSet = [...new Set(players)];
     let validPlayers = true;
     for (let i = 0; i < playersSet.length; i++) {
-      if (
-        !availableUsernames.some((username) => username === playersSet[i].value)
-      ) {
+      if (!usernames.some((username) => username === playersSet[i].value)) {
         alert("Each player must come from the dropdown menu");
         validPlayers = false;
         break;
@@ -76,7 +86,7 @@ const CreateElectionCustom = (props) => {
                       // player.value = newValue;
                     }}
                     id={`player-${index}`}
-                    options={availableUsernames}
+                    options={usernames}
                     style={{ width: 300 }}
                     renderInput={(params) => (
                       <TextField

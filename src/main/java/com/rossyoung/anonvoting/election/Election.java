@@ -51,4 +51,44 @@ public class Election {
         this.yesVotes = yesVotes;
         this.noVotes = noVotes;
     }
+
+    public Long getElectionId() {
+        return electionId;
+    }
+
+    public void setElectionId(Long electionId) {
+        this.electionId = electionId;
+    }
+
+    public String getOwner() {
+        return owner;
+    }
+
+    public void setOwner(String owner) {
+        this.owner = owner;
+    }
+
+    public int getElectionSize() {
+        return electionSize;
+    }
+
+    public void setElectionSize(int electionSize) {
+        this.electionSize = electionSize;
+    }
+
+    public int getYesVotes() {
+        return yesVotes;
+    }
+
+    public void setYesVotes(int yesVotes) {
+        this.yesVotes = yesVotes;
+    }
+
+    public int getNoVotes() {
+        return noVotes;
+    }
+
+    public void setNoVotes(int noVotes) {
+        this.noVotes = noVotes;
+    }
 }
