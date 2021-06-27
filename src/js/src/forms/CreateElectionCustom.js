@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
 import React from "react";
 import { Button } from "antd";
-import { createElection } from "../client";
-import { getAllAvailablePlayers } from "../client";
+import { createElection } from "../common/client";
+import { getAllAvailablePlayers } from "../common/client";
 import TextField from "@material-ui/core/TextField";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 
 const divStyle = { marginTop: "5%", marginBottom: "5%" };
 
-const CreateElectionCustom = (props) => {
+const CreateElectionCustom = ({
+  owner,
+  electionCreated,
+  addPlayerToElection,
+}) => {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [usernames, setUsernames] = useState([]);
@@ -24,7 +28,6 @@ const CreateElectionCustom = (props) => {
   }, []);
 
   const onSubmit = () => {
-    const { addPlayerToElection } = props;
     setLoading(true);
     const playersSet = [...new Set(players)];
     let validPlayers = true;
@@ -38,7 +41,7 @@ const CreateElectionCustom = (props) => {
     if (playersSet.length >= 2 && validPlayers) {
       const election = {
         electionSize: playersSet.length,
-        owner: props.owner,
+        owner: owner,
         yesVotes: 0,
         noVotes: 0,
       };
@@ -55,7 +58,7 @@ const CreateElectionCustom = (props) => {
           }
         })
       );
-      props.electionCreated();
+      electionCreated();
     } else {
       if (validPlayers) {
         alert("An election must have at least two players");
@@ -83,7 +86,6 @@ const CreateElectionCustom = (props) => {
                           return p;
                         })
                       );
-                      // player.value = newValue;
                     }}
                     id={`player-${index}`}
                     options={usernames}

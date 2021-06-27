@@ -3,7 +3,6 @@ package com.rossyoung.anonvoting.player;
 import lombok.Data;
 
 import javax.persistence.*;
-import java.security.Principal;
 
 @Data
 @Entity(name = "Player")
@@ -12,7 +11,7 @@ import java.security.Principal;
 })
 public class Player {
     @Id
-    @Column(name = "username", columnDefinition = "TEXT", nullable = false)
+    @Column(name = "username", columnDefinition = "TEXT", nullable = false, unique = true)
     private String username;
 
     @Column(name = "password", columnDefinition = "TEXT", nullable = false)

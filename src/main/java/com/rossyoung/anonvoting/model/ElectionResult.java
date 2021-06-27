@@ -39,14 +39,5 @@ public class ElectionResult {
     public void setVotingActive(boolean votingActive) {
         isVotingActive = votingActive;
     }
-
-    @Override
-    public String toString() {
-        return "ElectionResult{" +
-                "yesVotes=" + yesVotes +
-                ", noVotes=" + noVotes +
-                ", isVotingActive=" + isVotingActive +
-                '}';
-    }
 }
 

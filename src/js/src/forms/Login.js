@@ -1,13 +1,12 @@
 import React from "react";
 import { Formik } from "formik";
 import { Input, Button, Tag } from "antd";
-import { loginPlayer } from "../client";
 
 const tagStyle = { backgroundColor: "black", color: "white" };
 const divStyle = { marginTop: "4%", marginBottom: "4%" };
 let loading = false;
 
-const Login = (props) => (
+const Login = ({ login, afterLogin }) => (
   <Formik
     initialValues={{ username: "", password: "" }}
     validate={(values) => {
@@ -24,18 +23,15 @@ const Login = (props) => (
     }}
     onSubmit={(player, { setSubmitting }) => {
       loading = true;
-      loginPlayer(player).then((res) =>
-        res.json().then((returnedPlayer) => {
-          const username = returnedPlayer.username;
-          if (username !== "Not found") {
-            props.onLogIn(username);
-          } else {
-            alert("Invalid Login Credentials");
-          }
-        })
-      );
+      login(player).then((res) => {
+        if (res.status === 200) {
+          afterLogin(player.username);
+        } else {
+          alert("Invalid Login Credentials");
+          loading = false;
+        }
+      });
       setSubmitting(false);
-      loading = false;
     }}>
     {({
       values,
@@ -78,9 +74,7 @@ const Login = (props) => (
         )}
         <div style={divStyle}>
           <Button
-            onClick={() => {
-              submitForm();
-            }}
+            onClick={submitForm}
             type='primary'
             block
             disabled={isSubmitting || (touched && !isValid)}
