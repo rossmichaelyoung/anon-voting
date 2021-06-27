@@ -49,4 +49,7 @@ public class PlayerService {
         return playerRepository.existsById(player.getUsername());
     }
 
+    public boolean hasPlayerVoted(String username) {
+        return voteRepository.findVoteByUsername(username).map(Vote::getHasVoted).orElse(true);
+    }
 }

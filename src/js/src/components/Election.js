@@ -1,53 +1,56 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import React from "react";
 import { Button } from "antd";
 import Container from "./Container";
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
+import { Context } from "../common/Store";
+import {
+  setIsVotingActive,
+  setYes,
+  setNo,
+  setHasVoted,
+  electionOver,
+} from "../common/actions";
+import { deleteElection } from "../common/client";
 
 const divStyle = { marginTop: "15%", marginBottom: "5%" };
 
-const Election = ({
-  username,
-  size,
-  electionId,
-  exitElection,
-  useStickyState,
-}) => {
-  const [yes, setYes] = useStickyState(0, "yes");
-  const [no, setNo] = useStickyState(0, "no");
-  const [isVotingActive, setIsVotingActive] = useStickyState(
-    true,
-    "isVotingActive"
-  );
-  const [hasVoted, setHasVoted] = useStickyState(false, "hasVoted");
+const Election = () => {
+  const { state, dispatch } = useContext(Context);
+  const { username, yes, no, isVotingActive, hasVoted, electionId } = state;
+
+  const [loading, setLoading] = useState(true);
 
   const [stompClient, setStompClient] = useState(null);
   useEffect(() => {
-    //const socket = new SockJS("http://localhost:8080/ws");
     const socket = new SockJS(
       window.location.protocol + "//" + window.location.hostname + ":8080/ws"
     );
     const sc = Stomp.over(socket);
+    dispatch(setHasVoted(false));
     sc.connect({ username: username, webSocketType: "Vote" }, (frame) => {
       console.log("Connected: " + frame);
       sc.subscribe("/topic/election/" + electionId, (frame) => {
+        setLoading(true);
         console.log(frame);
         console.log(JSON.parse(frame.body));
-        const { isVotingActive, yesVotes, noVotes } = JSON.parse(frame.body);
-        setIsVotingActive(isVotingActive);
-        setYes(yesVotes);
-        setNo(noVotes);
+        const { votingActive, yesVotes, noVotes } = JSON.parse(frame.body);
+        dispatch(setIsVotingActive(votingActive));
+        dispatch(setYes(yesVotes));
+        dispatch(setNo(noVotes));
+        setLoading(false);
       });
     });
     setStompClient(sc);
 
     return () => {
-      if (sc !== null) sc.disconnect();
+      if (sc !== null) {
+        sc.disconnect();
+        console.log("Vote WebSocket Disconnected");
+      }
     };
-  }, [username, electionId, setIsVotingActive, setNo, setYes]);
-
-  useEffect(() => {}, []);
+  }, [dispatch, electionId, username]);
 
   const submitVote = ({ username, vote, electionId }) => {
     stompClient.send(
@@ -59,72 +62,81 @@ const Election = ({
         electionId: electionId,
       })
     );
-    setHasVoted(true);
+    dispatch(setHasVoted(true));
   };
 
-  return (
-    <Container size={size}>
-      <div style={divStyle}>
-        {isVotingActive && <h1>Vote Wisely, {username}</h1>}
+  const exitElection = () => {
+    deleteElection(electionId);
+    dispatch(electionOver(state));
+  };
 
-        {!isVotingActive && yes > no && <h1>Motion Passed</h1>}
+  if (loading) {
+    return (
+      <Container>
+        <h1>Loading Election</h1>
+      </Container>
+    );
+  } else {
+    return (
+      <Container>
+        <div style={divStyle}>
+          {isVotingActive && <h1>Vote Wisely, {username}</h1>}
 
-        {!isVotingActive && yes <= no && <h1>Motion Did Not Pass</h1>}
+          {!isVotingActive && yes > no && <h1>Motion Passed</h1>}
 
-        <div>
-          <h3>Yes: {yes}</h3>
-        </div>
-        <div style={{ marginTop: "2%", marginBottom: "2%" }}>
-          <h3>No: {no}</h3>
-        </div>
+          {!isVotingActive && yes <= no && <h1>Motion Did Not Pass</h1>}
 
-        {isVotingActive && !hasVoted && (
           <div>
-            <Button
-              onClick={() => {
-                const ballot = {
-                  username: username,
-                  vote: "YES",
-                  electionId: electionId,
-                };
-                submitVote(ballot);
-                setYes(yes + 1);
-              }}
-              type='primary'>
-              Yes
-            </Button>
-
-            <Button
-              onClick={() => {
-                const ballot = {
-                  username: username,
-                  vote: "NO",
-                  electionId: electionId,
-                };
-                submitVote(ballot);
-                setNo(no + 1);
-              }}
-              type='primary'
-              style={{ backgroundColor: "white", color: "black" }}>
-              No
-            </Button>
+            <h3>Yes: {yes}</h3>
           </div>
-        )}
-
-        {!isVotingActive && (
-          <div style={{ marginTop: "0.5%" }}>
-            <Button
-              onClick={() => {
-                exitElection();
-              }}
-              type='primary'>
-              Exit
-            </Button>
+          <div style={{ marginTop: "2%", marginBottom: "2%" }}>
+            <h3>No: {no}</h3>
           </div>
-        )}
-      </div>
-    </Container>
-  );
+
+          {isVotingActive && !hasVoted && (
+            <div>
+              <Button
+                onClick={() => {
+                  const ballot = {
+                    username: username,
+                    vote: "YES",
+                    electionId: electionId,
+                  };
+                  submitVote(ballot);
+                  dispatch(setYes(yes + 1));
+                }}
+                type='primary'>
+                Yes
+              </Button>
+
+              <Button
+                onClick={() => {
+                  const ballot = {
+                    username: username,
+                    vote: "NO",
+                    electionId: electionId,
+                  };
+                  submitVote(ballot);
+                  dispatch(setNo(no + 1));
+                }}
+                type='primary'
+                style={{ backgroundColor: "white", color: "black" }}>
+                No
+              </Button>
+            </div>
+          )}
+
+          {!isVotingActive && (
+            <div style={{ marginTop: "0.5%" }}>
+              <Button onClick={exitElection} type='primary'>
+                Exit
+              </Button>
+            </div>
+          )}
+        </div>
+      </Container>
+    );
+  }
 };
 
 export default Election;

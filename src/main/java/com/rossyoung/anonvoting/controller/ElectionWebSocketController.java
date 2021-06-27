@@ -7,6 +7,7 @@ import com.rossyoung.anonvoting.model.ElectionResult;
 import com.rossyoung.anonvoting.model.WebSocketSession;
 import com.rossyoung.anonvoting.model.WebSocketType;
 import com.rossyoung.anonvoting.player.PlayerRepository;
+import com.rossyoung.anonvoting.player.PlayerService;
 import com.rossyoung.anonvoting.repository.WebSocketSessionRepository;
 import com.rossyoung.anonvoting.vote.Vote;
 import com.rossyoung.anonvoting.vote.VoteRepository;
@@ -35,18 +36,20 @@ public class ElectionWebSocketController {
     private final ElectionService electionService;
     private final WebSocketSessionRepository webSocketSessionRepository;
     private final PlayerRepository playerRepository;
+    private final PlayerService playerService;
     private final static Map<String, Long> electionNotification = new HashMap<>();
 
     @Autowired
     public ElectionWebSocketController(SimpMessagingTemplate simpMessagingTemplate, VoteRepository voteRepository,
                                        ElectionRepository electionRepository,
-                                       ElectionService electionService, WebSocketSessionRepository webSocketSessionRepository, PlayerRepository playerRepository) {
+                                       ElectionService electionService, WebSocketSessionRepository webSocketSessionRepository, PlayerRepository playerRepository, PlayerService playerService) {
         this.simpMessagingTemplate = simpMessagingTemplate;
         this.voteRepository = voteRepository;
         this.electionRepository = electionRepository;
         this.electionService = electionService;
         this.webSocketSessionRepository = webSocketSessionRepository;
         this.playerRepository = playerRepository;
+        this.playerService = playerService;
     }
 
     @EventListener
@@ -72,7 +75,7 @@ public class ElectionWebSocketController {
     }
 
     @EventListener
-    public void handleSessionSubscribeEvent(SessionSubscribeEvent event) {
+    public void handleSessionSubscribeEvent(SessionSubscribeEvent event) throws Exception {
         GenericMessage message = (GenericMessage) event.getMessage();
         String simpDestination = (String) message.getHeaders().get("simpDestination");
         assert simpDestination != null;
@@ -84,7 +87,9 @@ public class ElectionWebSocketController {
             Principal principal = Objects.requireNonNull(event.getUser());
             String username = webSocketSessionRepository.findByPrincipalNameAndWebSocketType(principal.getName(), WebSocketType.FindElection).get(0).getUsername();
             if(electionNotification.containsKey(username)) {
-                simpMessagingTemplate.convertAndSendToUser(principal.getName(), "/queue/election", electionNotification.get(username));
+                if(electionRepository.existsById(electionNotification.get(username))) {
+                    simpMessagingTemplate.convertAndSendToUser(principal.getName(), "/queue/election", electionNotification.get(username));
+                }
                 electionNotification.remove(username);
             }
         }

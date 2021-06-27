@@ -6,30 +6,30 @@ import CreateElectionCustom from "../forms/CreateElectionCustom";
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import Election from "./Election";
-import { deleteElection } from "../client";
+import { useContext } from "react";
+import { Context } from "../common/Store";
+import {
+  setCreateElection,
+  setElectionId,
+  setIsElection,
+  setIsPlayerInAnElection,
+  logout,
+} from "../common/actions";
 
 const divStyle = { marginTop: "15%", marginBottom: "5%" };
 
-const Menu = ({ username, size, logout, useStickyState }) => {
-  const [createElection, setCreateElection] = useState(false);
-  const [electionId, setElectionId] = useStickyState(null, "electionId");
-  const [isElection, setIsElection] = useStickyState(false, "isElection");
+const Menu = () => {
+  const { state, dispatch } = useContext(Context);
+  const {
+    username,
+    createElection,
+    isElection,
+    isPlayerInAnElection,
+    keyPair,
+  } = state;
 
-  const exitElection = () => {
-    setElectionId(null);
-    setIsPlayerInAnElection(false);
-    setIsElection(false);
-    deleteElection(electionId);
-    window.localStorage.removeItem("isVotingActive");
-    window.localStorage.removeItem("hasVoted");
-    window.localStorage.removeItem("yes");
-    window.localStorage.removeItem("no");
-  };
-
-  const [isPlayerInAnElection, setIsPlayerInAnElection] = useState(false);
   const [stompClient, setStompClient] = useState(null);
   useEffect(() => {
-    //const socket = new SockJS("http://localhost:8080/ws");
     const socket = new SockJS(
       window.location.protocol + "//" + window.location.hostname + ":8080/ws"
     );
@@ -42,17 +42,20 @@ const Menu = ({ username, size, logout, useStickyState }) => {
           console.log("Received Message From Server");
           console.log(frame);
           console.log(JSON.parse(frame.body));
-          setElectionId(JSON.parse(frame.body));
-          setIsPlayerInAnElection(true);
+          dispatch(setElectionId(JSON.parse(frame.body)));
+          dispatch(setIsPlayerInAnElection(true));
         });
       }
     );
     setStompClient(sc);
 
     return () => {
-      if (sc !== null) sc.disconnect();
+      if (sc !== null) {
+        sc.disconnect();
+        console.log("FindElection WebSocket Disconnected");
+      }
     };
-  }, [username, setElectionId]);
+  }, [dispatch, username]);
 
   const addPlayerToElection = (username, electionId) => {
     stompClient.send("/app/election/" + electionId, {}, username);
@@ -60,13 +63,13 @@ const Menu = ({ username, size, logout, useStickyState }) => {
 
   if (!isElection) {
     return (
-      <Container size={size}>
+      <Container>
         <h1>Welcome, {username}</h1>
 
         {!createElection && (
           <Button
             onClick={() => {
-              setCreateElection(true);
+              dispatch(setCreateElection(true));
             }}
             type='primary'
             block>
@@ -80,14 +83,14 @@ const Menu = ({ username, size, logout, useStickyState }) => {
               <h2>Create an Election</h2>
               <CreateElectionCustom
                 owner={username}
-                electionCreated={() => setCreateElection(false)}
+                electionCreated={() => dispatch(setCreateElection(false))}
                 addPlayerToElection={addPlayerToElection}
               />
             </div>
             <div style={divStyle}>
               <Button
                 onClick={() => {
-                  setCreateElection(false);
+                  dispatch(setCreateElection(false));
                 }}
                 type='primary'>
                 Back
@@ -97,11 +100,10 @@ const Menu = ({ username, size, logout, useStickyState }) => {
         )}
 
         {!createElection && isPlayerInAnElection && (
-          //   take user to ElectionFunctional Component
           <div style={divStyle}>
             <Button
               onClick={() => {
-                setIsElection(true);
+                dispatch(setIsElection(true));
               }}
               type='primary'
               block>
@@ -111,22 +113,14 @@ const Menu = ({ username, size, logout, useStickyState }) => {
         )}
 
         <div style={{ marginTop: "15%" }}>
-          <Button onClick={logout} type='primary' block>
+          <Button onClick={() => dispatch(logout(state))} type='primary' block>
             Logout
           </Button>
         </div>
       </Container>
     );
   } else {
-    return (
-      <Election
-        electionId={electionId}
-        size={size}
-        username={username}
-        exitElection={exitElection}
-        useStickyState={useStickyState}
-      />
-    );
+    return <Election />;
   }
 };
 
